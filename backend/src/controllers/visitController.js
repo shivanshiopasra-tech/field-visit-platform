@@ -26,28 +26,40 @@ const getVisits = async (req, res) => {
         }
 
         const pageNumber = Math.max(Number(page) || 1, 1);
+
         const limitNumber = Math.min(
             Math.max(Number(limit) || 10, 1),
             100
         );
+
         const offset = (pageNumber - 1) * limitNumber;
 
         let conditions = [];
         let params = [];
 
-        // FIELD_OFFICER can only see own visits
+        // FIELD_OFFICER can only see their own visits
         if (req.user.role === "FIELD_OFFICER") {
             conditions.push("v.created_by = ?");
             params.push(req.user.id);
         }
 
+        // HQ_APPROVER can only see submitted visits.
+        // DRAFT visits are visible only to their creator or ADMIN.
+        if (req.user.role === "HQ_APPROVER") {
+            conditions.push(
+                "v.status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')"
+            );
+        }
+
+        // Optional status filter
         if (status) {
             conditions.push("v.status = ?");
             params.push(status);
         }
 
+        // Optional location filter
         if (location_id) {
-            if (isNaN(Number(location_id))) {
+            if (!Number.isInteger(Number(location_id))) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid location_id"
@@ -63,6 +75,7 @@ const getVisits = async (req, res) => {
                 ? `WHERE ${conditions.join(" AND ")}`
                 : "";
 
+        // Count total records
         const [countRows] = await pool.query(
             `
             SELECT COUNT(*) AS total
@@ -72,6 +85,7 @@ const getVisits = async (req, res) => {
             params
         );
 
+        // Fetch paginated visits
         const [visits] = await pool.query(
             `
             SELECT
@@ -129,6 +143,13 @@ const getVisitById = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
+
         const [visits] = await pool.query(
             `
             SELECT
@@ -156,6 +177,7 @@ const getVisitById = async (req, res) => {
 
         const visit = visits[0];
 
+        // FIELD_OFFICER can only access their own visits
         if (
             req.user.role === "FIELD_OFFICER" &&
             visit.created_by !== req.user.id
@@ -166,6 +188,7 @@ const getVisitById = async (req, res) => {
             });
         }
 
+        // Get complete approval history
         const [decisions] = await pool.query(
             `
             SELECT
@@ -206,6 +229,7 @@ const getVisitById = async (req, res) => {
 // POST /api/visits
 const createVisit = async (req, res) => {
     try {
+        // Only FIELD_OFFICER can create visits
         if (req.user.role !== "FIELD_OFFICER") {
             return res.status(403).json({
                 success: false,
@@ -231,6 +255,24 @@ const createVisit = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "All visit fields are required"
+            });
+        }
+
+        // Validate estimated cost
+        const cost = Number(estimated_cost);
+
+        if (!Number.isFinite(cost) || cost < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Estimated cost must be a non-negative number"
+            });
+        }
+
+        // Validate location
+        if (!Number.isInteger(Number(location_id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid location_id"
             });
         }
 
@@ -263,10 +305,10 @@ const createVisit = async (req, res) => {
             [
                 req.user.id,
                 location_id,
-                title,
-                purpose,
+                title.trim(),
+                purpose.trim(),
                 planned_date,
-                estimated_cost
+                cost
             ]
         );
 
@@ -293,6 +335,14 @@ const updateVisit = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
+
+        // Only FIELD_OFFICER can edit visits
         if (req.user.role !== "FIELD_OFFICER") {
             return res.status(403).json({
                 success: false,
@@ -314,6 +364,7 @@ const updateVisit = async (req, res) => {
 
         const visit = visits[0];
 
+        // Ownership check
         if (visit.created_by !== req.user.id) {
             return res.status(403).json({
                 success: false,
@@ -321,6 +372,7 @@ const updateVisit = async (req, res) => {
             });
         }
 
+        // Only DRAFT and REJECTED can be edited
         if (!["DRAFT", "REJECTED"].includes(visit.status)) {
             return res.status(400).json({
                 success: false,
@@ -349,6 +401,22 @@ const updateVisit = async (req, res) => {
             });
         }
 
+        const cost = Number(estimated_cost);
+
+        if (!Number.isFinite(cost) || cost < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Estimated cost must be a non-negative number"
+            });
+        }
+
+        if (!Number.isInteger(Number(location_id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid location_id"
+            });
+        }
+
         const [locations] = await pool.query(
             "SELECT id FROM locations WHERE id = ?",
             [location_id]
@@ -374,10 +442,10 @@ const updateVisit = async (req, res) => {
             WHERE id = ?
             `,
             [
-                title,
-                purpose,
+                title.trim(),
+                purpose.trim(),
                 planned_date,
-                estimated_cost,
+                cost,
                 location_id,
                 id
             ]
@@ -404,6 +472,13 @@ const updateVisit = async (req, res) => {
 const submitVisit = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
 
         if (req.user.role !== "FIELD_OFFICER") {
             return res.status(403).json({
@@ -472,14 +547,24 @@ const submitVisit = async (req, res) => {
 
 // PATCH /api/visits/:id/decision
 const decideVisit = async (req, res) => {
+    let connection;
+
     try {
         const { id } = req.params;
         const { decision, remark } = req.body;
 
-        if (req.user.role !== "HQ_APPROVER") {
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
+
+        // HQ_APPROVER and ADMIN can approve/reject
+        if (!["HQ_APPROVER", "ADMIN"].includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
-                message: "Only HQ approver can approve or reject visits"
+                message: "Only approvers and admins can approve or reject visits"
             });
         }
 
@@ -490,6 +575,7 @@ const decideVisit = async (req, res) => {
             });
         }
 
+        // Rejection requires written remark
         if (decision === "REJECTED" && !remark?.trim()) {
             return res.status(400).json({
                 success: false,
@@ -511,6 +597,7 @@ const decideVisit = async (req, res) => {
 
         const visit = visits[0];
 
+        // Approver/admin cannot approve their own visit
         if (visit.created_by === req.user.id) {
             return res.status(403).json({
                 success: false,
@@ -518,6 +605,7 @@ const decideVisit = async (req, res) => {
             });
         }
 
+        // Only PENDING visits can be decided
         if (visit.status !== "PENDING") {
             return res.status(400).json({
                 success: false,
@@ -525,7 +613,12 @@ const decideVisit = async (req, res) => {
             });
         }
 
-        await pool.query(
+        // Use transaction so status and approval history stay consistent
+        connection = await pool.getConnection();
+
+        await connection.beginTransaction();
+
+        await connection.query(
             `
             UPDATE visits
             SET
@@ -536,7 +629,7 @@ const decideVisit = async (req, res) => {
             [decision, id]
         );
 
-        await pool.query(
+        await connection.query(
             `
             INSERT INTO approval_decisions
             (
@@ -555,6 +648,8 @@ const decideVisit = async (req, res) => {
             ]
         );
 
+        await connection.commit();
+
         res.json({
             success: true,
             message: `Visit ${decision.toLowerCase()} successfully`,
@@ -564,12 +659,21 @@ const decideVisit = async (req, res) => {
         });
 
     } catch (error) {
+        if (connection) {
+            await connection.rollback();
+        }
+
         console.error("Decide visit error:", error);
 
         res.status(500).json({
             success: false,
             message: "Failed to process visit decision"
         });
+
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
@@ -578,6 +682,13 @@ const decideVisit = async (req, res) => {
 const resubmitVisit = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
 
         if (req.user.role !== "FIELD_OFFICER") {
             return res.status(403).json({
@@ -649,6 +760,13 @@ const completeVisit = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if (!Number.isInteger(Number(id))) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid visit ID"
+            });
+        }
+
         if (req.user.role !== "FIELD_OFFICER") {
             return res.status(403).json({
                 success: false,
@@ -717,15 +835,14 @@ const completeVisit = async (req, res) => {
 // GET /api/visits/summary
 const getSummary = async (req, res) => {
     try {
-        if (
-            !["HQ_APPROVER", "ADMIN"].includes(req.user.role)
-        ) {
+        if (!["HQ_APPROVER", "ADMIN"].includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Only approvers and admins can view summary"
             });
         }
 
+        // Count visits by status
         const [statusSummary] = await pool.query(
             `
             SELECT
@@ -737,6 +854,7 @@ const getSummary = async (req, res) => {
             `
         );
 
+        // Summary by location
         const [locationSummary] = await pool.query(
             `
             SELECT
@@ -752,11 +870,23 @@ const getSummary = async (req, res) => {
             `
         );
 
+        // Total planned cost across all visits
+        const [totalCostRows] = await pool.query(
+            `
+            SELECT
+                COALESCE(SUM(estimated_cost), 0) AS total_planned_cost
+            FROM visits
+            `
+        );
+
         res.json({
             success: true,
             summary: {
                 by_status: statusSummary,
-                by_location: locationSummary
+                by_location: locationSummary,
+                total_planned_cost: Number(
+                    totalCostRows[0].total_planned_cost
+                )
             }
         });
 

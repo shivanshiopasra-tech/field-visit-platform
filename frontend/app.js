@@ -513,12 +513,12 @@ function displayVisits(visits) {
                         }
 
                         ${
-                            visit.creator_name
+                            visit.created_by_name
                             ?
                             `<span>
                                 👤
                                 ${escapeHtml(
-                                    visit.creator_name
+                                    visit.created_by_name
                                 )}
                             </span>`
                             :
@@ -612,9 +612,9 @@ function getActionButtons(visit) {
 
 
     if (
-        role === "HQ_APPROVER" &&
-        visit.status === "PENDING"
-    ) {
+    (role === "HQ_APPROVER" || role === "ADMIN") &&
+    visit.status === "PENDING"
+) {
 
         buttons += `
 
@@ -951,7 +951,7 @@ async function viewVisit(id) {
 
                     <strong>
                         ${escapeHtml(
-                            visit.creator_name ||
+                            visit.created_by_name ||
                             "Unknown"
                         )}
                     </strong>
