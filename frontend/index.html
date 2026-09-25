@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Field Visit Platform</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- LOGIN PAGE -->
+    <section id="loginSection" class="login-page">
+
+        <div class="login-card">
+
+            <div class="brand">
+                <div class="brand-icon">FV</div>
+
+                <div>
+                    <h1>FieldVisit</h1>
+                    <p>Field Visit Management Platform</p>
+                </div>
+            </div>
+
+            <div class="login-heading">
+                <h2>Welcome back</h2>
+                <p>Sign in to manage your field visits.</p>
+            </div>
+
+            <form onsubmit="event.preventDefault(); login();">
+
+                <label>Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    placeholder="Enter your email"
+                    required
+                >
+
+                <label>Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+                <button type="submit" class="primary-btn login-btn">
+                    Sign In
+                </button>
+
+            </form>
+
+            <p id="loginMessage" class="message"></p>
+
+            <div class="login-footer">
+                Field Visit Platform
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- DASHBOARD -->
+    <section id="dashboardSection" class="dashboard hidden">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-brand">
+                <div class="brand-icon">FV</div>
+
+                <div>
+                    <strong>FieldVisit</strong>
+                    <small>Management Platform</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+
+                <a href="#" class="nav-item active">
+                    <span>▣</span>
+                    Dashboard
+                </a>
+
+                <a href="#visitsSection" class="nav-item">
+                    <span>▤</span>
+                    Visits
+                </a>
+
+                <a
+                    href="#summarySection"
+                    id="summaryNav"
+                    class="nav-item"
+                >
+                    <span>◫</span>
+                    Reports
+                </a>
+
+            </nav>
+
+            <div class="sidebar-bottom">
+
+                <div class="sidebar-user">
+
+                    <div class="avatar" id="sidebarAvatar">
+                        U
+                    </div>
+
+                    <div>
+                        <strong id="sidebarUserName">User</strong>
+                        <small id="sidebarUserRole">Role</small>
+                    </div>
+
+                </div>
+
+                <button onclick="logout()" class="logout-btn">
+                    ↪ Logout
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- TOP HEADER -->
+            <header class="top-header">
+
+                <div>
+                    <p class="eyebrow">FIELD VISIT MANAGEMENT</p>
+
+                    <h1 id="pageTitle">
+                        Dashboard
+                    </h1>
+
+                    <p id="pageSubtitle">
+                        Manage and track your field visits.
+                    </p>
+                </div>
+
+                <div class="profile-box">
+
+                    <div class="avatar" id="headerAvatar">
+                        U
+                    </div>
+
+                    <div>
+                        <strong id="userName">User</strong>
+                        <span id="userRole">ROLE</span>
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- SUMMARY CARDS -->
+            <div id="dashboardStats" class="stats-grid hidden">
+
+                <div class="stat-card">
+                    <div class="stat-icon blue">▤</div>
+
+                    <div>
+                        <span>Total Visits</span>
+                        <strong id="totalVisits">0</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">◷</div>
+
+                    <div>
+                        <span>Pending</span>
+                        <strong id="pendingVisits">0</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">✓</div>
+
+                    <div>
+                        <span>Approved</span>
+                        <strong id="approvedVisits">0</strong>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">₹</div>
+
+                    <div>
+                        <span>Planned Cost</span>
+                        <strong id="plannedCost">₹0</strong>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- CREATE VISIT -->
+            <section id="createSection" class="content-card hidden">
+
+                <div class="section-header">
+
+                    <div>
+                        <p class="section-label">FIELD ACTIVITY</p>
+
+                        <h2>Create New Visit</h2>
+
+                        <p>
+                            Create a new field visit for approval.
+                        </p>
+                    </div>
+
+                </div>
+
+                <form onsubmit="event.preventDefault(); createVisit();">
+
+                    <div class="form-grid">
+
+                        <div class="form-group full">
+                            <label>Visit Title</label>
+
+                            <input
+                                type="text"
+                                id="title"
+                                placeholder="e.g. Delhi Water Quality Survey"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group full">
+                            <label>Purpose</label>
+
+                            <textarea
+                                id="purpose"
+                                placeholder="Describe the purpose of this visit..."
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="form-group">
+
+                            <label>Planned Date</label>
+
+                            <input
+                                type="date"
+                                id="plannedDate"
+                                required
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label>Estimated Cost</label>
+
+                            <input
+                                type="number"
+                                id="estimatedCost"
+                                placeholder="5000"
+                                min="0"
+                                step="0.01"
+                                required
+                            >
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label>Location ID</label>
+
+                            <input
+                                type="number"
+                                id="locationId"
+                                placeholder="1"
+                                min="1"
+                                required
+                            >
+
+                            <small>
+                                1 = Delhi Program Office &nbsp; | &nbsp;
+                                2 = Noida Field Site
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-actions">
+
+                        <button
+                            type="submit"
+                            class="primary-btn"
+                        >
+                            + Create Visit
+                        </button>
+
+                    </div>
+
+                </form>
+
+                <p id="createMessage" class="message"></p>
+
+            </section>
+
+
+            <!-- VISITS -->
+            <section id="visitsSection" class="content-card">
+
+                <div class="section-header visit-header">
+
+                    <div>
+                        <p class="section-label">FIELD ACTIVITIES</p>
+
+                        <h2>Visits</h2>
+
+                        <p>
+                            View and manage field visit requests.
+                        </p>
+                    </div>
+
+                    <button
+                        onclick="loadVisits()"
+                        class="secondary-btn"
+                    >
+                        ↻ Refresh
+                    </button>
+
+                </div>
+
+
+                <!-- FILTERS -->
+                <div class="filters">
+
+                    <div class="filter-group">
+
+                        <label>Status</label>
+
+                        <select id="statusFilter">
+
+                            <option value="">
+                                All Statuses
+                            </option>
+
+                            <option value="DRAFT">
+                                DRAFT
+                            </option>
+
+                            <option value="PENDING">
+                                PENDING
+                            </option>
+
+                            <option value="APPROVED">
+                                APPROVED
+                            </option>
+
+                            <option value="REJECTED">
+                                REJECTED
+                            </option>
+
+                            <option value="COMPLETED">
+                                COMPLETED
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="filter-group">
+
+                        <label>Location ID</label>
+
+                        <input
+                            type="number"
+                            id="locationFilter"
+                            placeholder="All locations"
+                            min="1"
+                        >
+
+                    </div>
+
+
+                    <button
+                        onclick="currentPage = 1; loadVisits();"
+                        class="primary-btn filter-btn"
+                    >
+                        Search
+                    </button>
+
+                </div>
+
+
+                <!-- VISITS LIST -->
+                <div id="visits" class="visits-list">
+
+                    <div class="loading">
+                        Loading visits...
+                    </div>
+
+                </div>
+
+
+                <!-- PAGINATION -->
+                <div class="pagination">
+
+                    <button
+                        id="previousBtn"
+                        onclick="previousPage()"
+                        class="page-btn"
+                    >
+                        ← Previous
+                    </button>
+
+                    <span id="pageNumber">
+                        Page 1
+                    </span>
+
+                    <button
+                        id="nextBtn"
+                        onclick="nextPage()"
+                        class="page-btn"
+                    >
+                        Next →
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- SUMMARY -->
+            <section
+                id="summarySection"
+                class="content-card hidden"
+            >
+
+                <div class="section-header">
+
+                    <div>
+
+                        <p class="section-label">
+                            REPORTING
+                        </p>
+
+                        <h2>HQ Summary</h2>
+
+                        <p>
+                            Overview of all field visits.
+                        </p>
+
+                    </div>
+
+                    <button
+                        onclick="loadSummary()"
+                        class="secondary-btn"
+                    >
+                        ↻ Refresh
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="summaryCards"
+                    class="summary-cards"
+                ></div>
+
+
+                <div class="summary-table-wrapper">
+
+                    <h3>Location Breakdown</h3>
+
+                    <div id="locationSummary"></div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </section>
+
+
+    <!-- DETAILS MODAL -->
+    <div
+        id="detailsModal"
+        class="modal hidden"
+        onclick="closeModal(event)"
+    >
+
+        <div
+            class="modal-content"
+            onclick="event.stopPropagation()"
+        >
+
+            <div class="modal-header">
+
+                <div>
+                    <p class="section-label">
+                        VISIT DETAILS
+                    </p>
+
+                    <h2 id="modalTitle">
+                        Visit Details
+                    </h2>
+                </div>
+
+                <button
+                    onclick="closeDetailsModal()"
+                    class="close-btn"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div id="modalBody"></div>
+
+        </div>
+
+    </div>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>
